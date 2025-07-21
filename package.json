@@ -1,14 +1,23 @@
 {
-  "name": "music-bot",
+  "name": "escano-music-bot",
   "version": "1.0.0",
+  "description": "A high-quality Discord music bot with Spotify and YouTube support, created by Escanorlive.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "discord",
+    "music",
+    "bot",
+    "distube",
+    "spotify",
+    "youtube",
+    "ffmpeg"
+  ],
+  "author": "Escanorlive",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@distube/spotify": "^2.0.2",
