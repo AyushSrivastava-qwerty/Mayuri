@@ -1,84 +1,117 @@
-require("dotenv").config();
-const { Client, GatewayIntentBits, Partials } = require("discord.js");
-const { DisTube } = require("distube");
-const { SpotifyPlugin } = require("@distube/spotify");
-const { YtDlpPlugin } = require("@distube/yt-dlp");
+// index.js
+require('dotenv').config();
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
+const { DisTube } = require('distube');
+const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { SpotifyPlugin } = require('@distube/spotify');
+const { SoundCloudPlugin } = require('@distube/soundcloud');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel]
 });
 
-client.once("ready", () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
-
-const distube = new DisTube(client, {
+client.distube = new DisTube(client, {
+  emitNewSongOnly: true,
+  leaveOnEmpty: true,
+  leaveOnFinish: false,
+  leaveOnStop: false,
   plugins: [
+    new YtDlpPlugin({
+      update: true,
+      cookies: "youtube-cookies.txt"
+    }),
     new SpotifyPlugin(),
-    new YtDlpPlugin()
+    new SoundCloudPlugin()
   ]
 });
 
-client.on("messageCreate", async message => {
-  if (message.author.bot || !message.guild) return;
+client.once('ready', () => {
+  console.log(`🎵 Logged in as ${client.user.tag}!`);
+});
 
-  const prefix = "!"; // change if needed
-  if (!message.content.startsWith(prefix)) return;
+const prefix = '!';
 
+client.on('messageCreate', async (message) => {
+  if (!message.guild || message.author.bot || !message.content.startsWith(prefix)) return;
   const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
+  const cmd = args.shift().toLowerCase();
 
-  if (command === "play") {
-    const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel) return message.reply("❌ Join a voice channel first.");
-    if (!args[0]) return message.reply("❌ Please provide a song name or URL.");
-
-    distube.play(voiceChannel, args.join(" "), {
-      textChannel: message.channel,
-      member: message.member,
-    });
+  const voiceChannel = message.member?.voice.channel;
+  if (!voiceChannel && ['play', 'skip', 'stop', 'pause', 'resume', 'volume', 'nowplaying', 'np'].includes(cmd)) {
+    return message.reply('You must be in a voice channel to use music commands.');
   }
 
-  if (command === "stop") {
-    distube.stop(message);
-    message.channel.send("⏹️ Stopped the music.");
-  }
+  switch (cmd) {
+    case 'play':
+      client.distube.play(voiceChannel, args.join(' '), {
+        member: message.member,
+        textChannel: message.channel,
+        message
+      });
+      break;
 
-  if (command === "skip") {
-    distube.skip(message);
-    message.channel.send("⏭️ Skipped.");
-  }
+    case 'skip':
+      client.distube.skip(message);
+      break;
 
-  if (command === "volume") {
-    const vol = parseInt(args[0]);
-    if (isNaN(vol) || vol < 0 || vol > 100) return message.reply("❌ Volume must be between 0 and 100.");
-    distube.setVolume(message, vol);
-    message.channel.send(`🔊 Volume set to ${vol}%`);
-  }
+    case 'stop':
+      client.distube.stop(message);
+      break;
 
-  if (command === "nowplaying" || command === "np") {
-    const queue = distube.getQueue(message);
-    if (!queue) return message.reply("❌ Nothing is playing right now.");
-    message.channel.send(`🎶 Now playing: \`${queue.songs[0].name}\``);
-  }
+    case 'pause':
+      client.distube.pause(message);
+      break;
 
-  if (command === "queue") {
-    const queue = distube.getQueue(message);
-    if (!queue) return message.reply("❌ The queue is empty.");
-    message.channel.send(
-      `📜 Current queue:\n${queue.songs
-        .map((song, i) => `${i === 0 ? "▶️" : `${i + 1}.`} ${song.name}`)
-        .join("\n")}`
-    );
+    case 'resume':
+      client.distube.resume(message);
+      break;
+
+    case 'volume':
+      if (!args[0]) return message.reply('Please specify a volume value.');
+      client.distube.setVolume(message, Number(args[0]));
+      message.reply(`🔊 Volume set to ${args[0]}%`);
+      break;
+
+    case 'np':
+    case 'nowplaying':
+      const queue = client.distube.getQueue(message);
+      if (!queue) return message.reply('No music is currently playing.');
+      message.reply(`🎶 Now playing: ${queue.songs[0].name}`);
+      break;
+
+    case 'intro':
+      const embed = new EmbedBuilder()
+        .setTitle('🎵 Escanorlive Music Bot')
+        .setDescription('High quality 24/7 music bot powered by DisTube, created and managed by <@YOUR_USER_ID>')
+        .setColor('Random');
+      message.channel.send({ embeds: [embed] });
+      break;
+
+    case 'help':
+      message.channel.send(`📘 **Available Commands:**
+\`\`\`
+!play <song name or URL> - Plays a song
+!skip - Skips the current song
+!stop - Stops playback
+!pause - Pauses the current song
+!resume - Resumes the paused song
+!volume <value> - Sets volume
+!np or !nowplaying - Shows current playing song
+!intro - Displays bot intro and credits
+!help - Shows this help menu
+\`\`\``);
+      break;
+
+    default:
+      message.reply('❌ Unknown command. Use `!help` to view all available commands.');
   }
 });
 
 client.login(process.env.TOKEN);
-
 
