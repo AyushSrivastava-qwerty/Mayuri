@@ -12,8 +12,7 @@
 - ⏺️ Slash command and text command support
 - 📜 `!intro` – Tells who made the bot
 - ❓ `!help` – Lists all bot commands
-- 🪄 Just type a song name — no prefix needed!
-- 🌐 Free 24/7 hosting on Render.com
+- 🪄 Just type a song name
 - ⚙️ Easy to configure with `.env` file
 
 ---
